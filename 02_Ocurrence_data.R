@@ -69,7 +69,7 @@ data_cleaned <- datos_gbif_crop[!dups, ]
 data_cleaned <- datos_gbif_crop[!dups2, ] 
 
 print(paste(nrow(data_cleaned), "Datos de ocurrencias de GBIF", tag_esp, "guardados en", "data folder"))
-write_csv(data_cleaned, "data/SDM_cleaned_data.csv")
+write_csv(data_cleaned, "data/gbif_cleaned_data.csv")
 
 
 

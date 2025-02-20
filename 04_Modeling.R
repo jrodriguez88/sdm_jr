@@ -180,10 +180,10 @@ rf_tr <- calcula_threshold(erf)
 pr <- predict(predictors, rf1)
 par(mfrow=c(1,2))
 plot(pr, main='Random Forest, regression')
-plot(limites_col, add=TRUE, border='dark grey')
+plot(limites_sel, add=TRUE, border='dark grey')
 
 plot(pr > rf_tr, main='presence/absence')
-plot(limites_col, add=TRUE, border='dark grey')
+plot(limites_sel, add=TRUE, border='dark grey')
 points(pres_train, pch='+')
 points(backg_train, pch='-', cex=0.25)
 
@@ -206,7 +206,14 @@ plot(m2, main='weighted mean of five models - Cacao')
 
 
 
-
+par(mfrow=c(1,2))
+auc <- sapply(list(me, erf), function(x) x@auc)
+w <- (auc-0.5)^2
+m2 <- weighted.mean( models[[c("Maxent", "RandomForest")]], w)
+plot(m2, main='weighted mean of Two models - Cacao')
+plot(m2 > 0.51, main='presence/absence')
+plot(limites_sel, add=TRUE, border='dark grey')
+points(pres_test, pch='+')
 
 
 
