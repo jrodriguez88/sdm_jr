@@ -29,20 +29,23 @@ plot(limites_sel, main = paste0("Colombia - ", round(ext_sel, 2)))
 # Digital Elevation Model - Terrain
 elevation <- geodata::elevation_global(0.5, path=tempdir())
 elevation <- crop(elevation, ext_sel)
-slope <- terrain(elevation, v="slope", neighbors=8, unit="radians")
-aspect <- terrain(elevation, v = "aspect", neighbors=8, unit="radians")
-hillshade <- shade(slope, aspect, angle = c(45, 45, 45, 80), 
+slope <- terra::terrain(elevation, v="slope", neighbors=8, unit="radians")
+aspect <- terra::terrain(elevation, v = "aspect", neighbors=8, unit="radians")
+hillshade <- terra::shade(slope, aspect, angle = c(45, 45, 45, 80), 
                    direction = c(225, 270, 315, 135)) %>% Reduce(mean, .)
 
 par(mfrow = c(2,2))
-plot(slope)
-plot(aspect)
+plot(slope*180/pi)
+plot(aspect*180/pi)
 plot(elevation)
-plot(hillshade)
+plot(hillshade*100)
 
-terrain_predictors <- rast(list(elevation = elevation, slope, aspect, hillshade = hillshade))
+terrain_predictors <- rast(list(elevation = elevation, 
+                                slope = slope*180/pi, 
+                                aspect = aspect*180/pi, 
+                                hillshade = hillshade*100))
 
-writeRaster(terrain_predictors, filename = "data/predictors/terrain_predictors.tiff")
+writeRaster(terrain_predictors, filename = "data/predictors/terrain_predictors.tiff", overwrite = T)
 
 
 ## Predictors - Environmental data ----
@@ -88,9 +91,11 @@ soil_predictors <- setNames(rast(soil_predictors$median_rast), soil_predictors$v
  
 writeRaster(soil_predictors, filename = "data/predictors/soil_predictors.tiff")
 
-all_predictors <- list(bioclim_predictors, soil_predictors) %>% 
-  map(~project(.x, terrain_predictors[[1]], method = "bilinear")) %>% 
-  rast() %>% c(., terrain_predictors)
+# all_predictors <- list(bioclim_predictors, soil_predictors) %>% 
+#   map(~project(.x, terrain_predictors[[1]], method = "bilinear")) %>% 
+#   rast() %>% c(., terrain_predictors)
+
+all_predictors <- c(bioclim_predictors, soil_predictors, terrain_predictors)
 
 predictor_names <- names(all_predictors) %>% str_remove_all("wc2.1_30s_")
 all_predictors <- setNames(all_predictors, predictor_names)
