@@ -130,7 +130,7 @@ num_PA <- nrow(terra::extract(predictors, species_points, ID = FALSE))  # should
 
 # Sample candidate points from the background area
 # Here we sample 5 times as many candidate points as needed.
-candidate_PA <- spatSample(background_area, size = num_PA * pAusencias_times, 
+candidate_PA <- spatSample(background_area, size = num_PA * pseudo_ausencia_mult, 
                            method = "random")
 
 # Extract environmental values at candidate pseudo-absence locations

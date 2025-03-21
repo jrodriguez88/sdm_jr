@@ -12,7 +12,7 @@ library(raster)
 library(dismo)
 library(rJava)
 library(geodata)
-library(tidymodels)
+# library(tidymodels)
 library(randomForest)
 library(gbm)
 library(mgcv)
@@ -20,7 +20,7 @@ library(caret)
 library(pROC)
 library(car)
 library(sf)
-library(naniar)
+# library(naniar)
 library(corrplot)
 library(spThin)
 library(CoordinateCleaner)
@@ -57,38 +57,40 @@ if(isTRUE(descargar_predictores)){
 cacao <- c("theobroma", "cacao")
 canangucha <- c("mauritia", "flexuosa")
 copoazu <- c("theobroma", "grandiflorum")
-
 # Choco
 coco <- c("cocos", "nucifera")
 vainilla <- c("vanilla", "") #"planifolia")
 
-especie <- vainilla
 
-
+## Modeling
 set.seed(2024)
-output_dir <- "outputs/"  ; dir.create(output_dir)
-tag_spe <- paste0(str_to_title(especie[1]), "_", str_to_title(especie[2]))
-output_specie <- paste0(output_dir, tag_spe, "/") ; dir.create(output_specie)
 
-# Descarga y limpieza
-source("02_Ocurrence_data.R")
-datos_gbif_crop
-data_cleaned
-## VIF and background
+especies_list <- list(cacao, canangucha, copoazu, coco, vainilla)
 
+
+# Global args
 vif_threshold = 15
-# Spearman correlation 
-#corr_threshold = 0.90
-#buffer
 threshold_distance <- 20000
-pAusencias_times <- 3
-source("03_VIF_and_background.R")
-pred_select
-plot(p)
+pseudo_ausencia_mult <- 3
+path <- getwd()
 
+for (especie in seq_along(especies_list)){
+  
+  especie <- especies_list[[especie]]
+  
+  output_dir <- paste0(path, "/outputs/")  ; dir.create(output_dir)
+  tag_spe <- paste0(str_to_title(especie[1]), "_", str_to_title(especie[2]))
+  output_specie <- paste0(output_dir, tag_spe, "/") ; dir.create(output_specie)
+  
+  
+  source("02_Ocurrence_data.R") # Descarga y limpieza
+  source("03_VIF_and_background.R")  # VF and Background
+  source("04_Modeling_SDM.R") # SDM models an evals
+  
+}
 
-# Modeling SDM
-source("04_Modeling_SDM.R")
+  
+
 
 
 
