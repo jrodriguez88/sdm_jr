@@ -1,29 +1,29 @@
 ## Climate change escenarios 
 # options(java.parameters = "-Xmx20g")
 
-bio_ssp245_predictors <- rast("data/predictors/bioclim_ensemble_raster_ssp245_2040_2060.tif")
-# soil_predictors <- rast("data/predictors/soil_predictors.tiff")
-# terrain_predictors <- rast("data/predictors/terrain_predictors.tiff")
-
-ssp245_predictors <- c(bio_ssp245_predictors, soil_predictors, terrain_predictors) 
-
-predictors_ssp245 <- ssp245_predictors[[pred_select]]
-
-
-# load("entregable_19_03/Vanilla_/Vanilla__sdm_trained_models.RData")
-
-# 7. Create predictions ---------------------------------------------------
-# GAM prediction
-gam_pred_ssp245 <- predict(predictors_ssp245, gam_model, type = "response")
-
-# BRT prediction
-gbm_pred_ssp245 <- predict(predictors_ssp245, gbm_model, n.trees = best_trees, type = "response",na.rm=TRUE)
-
-# MaxEnt prediction
-maxent_pred_ssp245 <- predict(predictors_ssp245, maxent_model,na.rm=TRUE)
-
-# Random Forest prediction
-rf_pred_ssp245 <- predict(predictors_ssp245, rf_model, type = "prob", index = 2, na.rm=TRUE)
+# bio_ssp245_predictors <- rast("data/predictors/bioclim_ensemble_raster_ssp245_2040_2060.tif")
+# # soil_predictors <- rast("data/predictors/soil_predictors.tiff")
+# # terrain_predictors <- rast("data/predictors/terrain_predictors.tiff")
+# 
+# ssp245_predictors <- c(bio_ssp245_predictors, soil_predictors, terrain_predictors) 
+# 
+# predictors_ssp245 <- ssp245_predictors[[pred_select]]
+# 
+# 
+# # load("entregable_19_03/Vanilla_/Vanilla__sdm_trained_models.RData")
+# 
+# # 7. Create predictions ---------------------------------------------------
+# # GAM prediction
+# gam_pred_ssp245 <- predict(predictors_ssp245, gam_model, type = "response")
+# 
+# # BRT prediction
+# gbm_pred_ssp245 <- predict(predictors_ssp245, gbm_model, n.trees = best_trees, type = "response",na.rm=TRUE)
+# 
+# # MaxEnt prediction
+# maxent_pred_ssp245 <- predict(predictors_ssp245, maxent_model,na.rm=TRUE)
+# 
+# # Random Forest prediction
+# rf_pred_ssp245 <- predict(predictors_ssp245, rf_model, type = "prob", index = 2, na.rm=TRUE)
 
 # # 8. Plot predictions ----------------------------------------------------
 # jpeg(paste0(output_specie, tag_spe, "_SDM_prediction_SSP245_Map.jpg"),
@@ -84,9 +84,9 @@ tasks <- list(
 
 # Función que, según la tarea, realiza la predicción y guarda el raster
 predict_and_write <- function(task) {
-  predictors <- c(rast("D:/00_DEVELOPER/sdm_jr/data/predictors/bioclim_ensemble_raster_ssp245_2040_2060.tif"),
-                  rast("D:/00_DEVELOPER/sdm_jr/data/predictors/soil_predictors.tiff"),
-                  rast("D:/00_DEVELOPER/sdm_jr/data/predictors/terrain_predictors.tiff"))
+  predictors <- c(rast(paste0(predictors_path, "bioclim_ensemble_raster_ssp245_2040_2060.tif")),
+                  rast(paste0(predictors_path, "soil_predictors.tiff")),
+                  rast(paste0(predictors_path, "terrain_predictors.tiff")))
   
   if (task$model == "GAM") {
     pred <- predict(predictors, gam_model, type = "response")
@@ -104,3 +104,16 @@ predict_and_write <- function(task) {
 
 # Ejecutar las tareas en paralelo
 results_ssp245 <- parLapply(cl, tasks, predict_and_write)
+
+# 7. Create predictions ---------------------------------------------------
+# GAM prediction
+gam_pred_ssp245 <- rast(tasks[[1]]$output)
+
+# BRT prediction
+gbm_pred_ssp245 <- rast(tasks[[2]]$output)
+
+# MaxEnt prediction
+maxent_pred_ssp245 <- rast(tasks[[3]]$output)
+
+# Random Forest prediction
+rf_pred_ssp245 <- rast(tasks[[4]]$output)

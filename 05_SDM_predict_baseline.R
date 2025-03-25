@@ -1,20 +1,91 @@
 
+# 
+# predictors <- rast(paste0(output_specie, tag_spe, "_model_predictors_base.tif"))
+# 
+# 
+# # 7. Create predictions Linea base-----------------------------------------------
+# # GAM prediction
+# gam_pred <- predict(predictors, gam_model, type = "response")
+# 
+# # BRT prediction
+# gbm_pred <- predict(predictors, gbm_model, n.trees = best_trees, type = "response", na.rm=TRUE)
+# 
+# # MaxEnt prediction
+# maxent_pred <- predict(predictors, maxent_model,na.rm=TRUE)
+# 
+# # Random Forest prediction
+# rf_pred <- predict(predictors, rf_model, type = "prob", index = 2, na.rm=TRUE)
 
-predictors <- rast(paste0(output_specie, tag_spe, "_model_predictors_base.tif"))
 
 
-# 7. Create predictions Linea base-----------------------------------------------
+# Número de workers: 4
+n_workers <- 4
+cl <- makeCluster(n_workers)
+
+# Cargar 'terra' en cada worker
+clusterEvalQ(cl, {
+  options(java.parameters = "-Xmx8g")
+  library(terra)
+  library(gbm)
+  library(randomForest)
+  library(dismo)
+  library(mgcv)
+  library(rJava)
+  
+})
+
+# Cargar el raster y exportarlo junto con los modelos y parámetros a cada worker
+# predictors <- rast(paste0(output_specie, tag_spe, "_model_predictors_base.tif"))
+clusterExport(cl, varlist = c("gam_model", "gbm_model", "maxent_model", "rf_model", "best_trees", "output_specie", "tag_spe", "predictors_path"))
+
+# Lista de tareas: cada elemento indica el modelo y el nombre de salida
+tasks <- list(
+  list(model = "GAM",    output = paste0(output_specie, tag_spe, "_", "Baseline_GAM.tif")),
+  list(model = "BRT",    output = paste0(output_specie, tag_spe, "_", "Baseline_BRT.tif")),
+  list(model = "MaxEnt", output = paste0(output_specie, tag_spe, "_", "Baseline_MaxEnt.tif")),
+  list(model = "RF",     output = paste0(output_specie, tag_spe, "_", "Baseline_RF.tif"))
+)
+
+# Función que, según la tarea, realiza la predicción y guarda el raster
+predict_and_write <- function(task) {
+  predictors <- c(rast(paste0(predictors_path, "bioclim_predictors.tiff")),
+                  rast(paste0(predictors_path, "soil_predictors.tiff")),
+                  rast(paste0(predictors_path, "terrain_predictors.tiff")))
+  predictor_names <- gsub("wc2.1_30s_", "", names(predictors))
+  predictors <- setNames(predictors, predictor_names)
+  
+  if (task$model == "GAM") {
+    pred <- predict(predictors, gam_model, type = "response")
+  } else if (task$model == "BRT") {
+    pred <- predict(predictors, gbm_model, n.trees = best_trees, type = "response", na.rm = TRUE)
+  } else if (task$model == "MaxEnt") {
+    pred <- predict(predictors, maxent_model, na.rm = TRUE)
+  } else if (task$model == "RF") {
+    pred <- predict(predictors, rf_model, type = "prob", index = 2, na.rm = TRUE)
+  }
+  
+  writeRaster(pred, task$output, overwrite = TRUE)
+  return(task$model)
+}
+
+# Ejecutar las tareas en paralelo
+results_base <- parLapply(cl, tasks, predict_and_write)
+# maxent_pred2 <- rast(tasks[[3]]$output)
+
+# 7. Create predictions ---------------------------------------------------
 # GAM prediction
-gam_pred <- predict(predictors, gam_model, type = "response")
+gam_pred <- rast(tasks[[1]]$output)
 
 # BRT prediction
-gbm_pred <- predict(predictors, gbm_model, n.trees = best_trees, type = "response", na.rm=TRUE)
+gbm_pred <- rast(tasks[[2]]$output)
 
 # MaxEnt prediction
-maxent_pred <- predict(predictors, maxent_model,na.rm=TRUE)
+maxent_pred <- rast(tasks[[3]]$output)
 
 # Random Forest prediction
-rf_pred <- predict(predictors, rf_model, type = "prob", index = 2, na.rm=TRUE)
+rf_pred <- rast(tasks[[4]]$output)
+
+
 
 # 8. Plot predictions ----------------------------------------------------
 jpeg(paste0(output_specie, tag_spe, "_SDM_prediction_Map.jpg"),

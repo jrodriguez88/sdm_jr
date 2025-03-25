@@ -30,7 +30,7 @@ library(CoordinateCleaner)
 library(viridis)
 #library(biooracler)
 # library(exactextractr)
-
+library(parallel)
 library(gridBase)
 library(grid)
 
@@ -43,6 +43,7 @@ ext_sel <- ext(limites_sel)
 
 study_area <- w %>% crop(ext_sel)
 plot(study_area)
+predictors_path <- paste0(getwd(), "/data/predictors/")
 
 descargar_predictores <- FALSE
 if(isTRUE(descargar_predictores)){
@@ -81,11 +82,12 @@ buffer_presence <- 20000
 pseudo_ausencia_mult <- 3
 path <- getwd()
 
+tictoc::tic()
 for (especie in seq_along(especies_list)){
   
   especie <- especies_list[[especie]]
   
-  output_dir <- paste0(path, "/outputs/")  ; dir.create(output_dir)
+  output_dir <- paste0(path, "/outputs3/")  ; dir.create(output_dir)
   tag_spe <- paste0(str_to_title(especie[1]), "_", str_to_title(especie[2]))
   output_specie <- paste0(output_dir, tag_spe, "/") ; dir.create(output_specie)
   
@@ -96,11 +98,12 @@ for (especie in seq_along(especies_list)){
   source("05_SDM_predict_baseline.R")
   source("05_SDM_predict_ssp245.R")
   source("05_SDM_predict_ssp585.R")
+  source("06_SDM_ensemble.R")
   source("06_Delta_maps.R")
   # source("04_Modeling_SDM.R") # SDM models an evals
   
 }
-
+tictoc::toc()
 
   
 

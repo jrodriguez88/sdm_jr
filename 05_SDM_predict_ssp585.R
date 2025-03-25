@@ -1,29 +1,29 @@
 ## Climate change escenarios 
 # options(java.parameters = "-Xmx20g")
 
-bio_ssp585_predictors <- rast("data/predictors/bioclim_ensemble_raster_ssp585_2040_2060.tif")
-# soil_predictors <- rast("data/predictors/soil_predictors.tiff")
-# terrain_predictors <- rast("data/predictors/terrain_predictors.tiff")
-
-ssp585_predictors <- c(bio_ssp585_predictors, soil_predictors, terrain_predictors) 
-
-predictors_ssp585 <- ssp585_predictors[[pred_select]]
+# bio_ssp585_predictors <- rast("data/predictors/bioclim_ensemble_raster_ssp585_2040_2060.tif")
+# # soil_predictors <- rast("data/predictors/soil_predictors.tiff")
+# # terrain_predictors <- rast("data/predictors/terrain_predictors.tiff")
+# 
+# ssp585_predictors <- c(bio_ssp585_predictors, soil_predictors, terrain_predictors) 
+# 
+# predictors_ssp585 <- ssp585_predictors[[pred_select]]
 
 
 # load("entregable_19_03/Vanilla_/Vanilla__sdm_trained_models.RData")
 
-# 7. Create predictions ---------------------------------------------------
-# GAM prediction
-gam_pred_ssp585 <- predict(predictors_ssp585, gam_model, type = "response")
-
-# BRT prediction
-gbm_pred_ssp585 <- predict(predictors_ssp585, gbm_model, n.trees = best_trees, type = "response",na.rm=TRUE)
-
-# MaxEnt prediction
-maxent_pred_ssp585 <- predict(predictors_ssp585, maxent_model,na.rm=TRUE)
-
-# Random Forest prediction
-rf_pred_ssp585 <- predict(predictors_ssp585, rf_model, type = "prob", index = 2, na.rm=TRUE)
+# # 7. Create predictions ---------------------------------------------------
+# # GAM prediction
+# gam_pred_ssp585 <- predict(predictors_ssp585, gam_model, type = "response")
+# 
+# # BRT prediction
+# gbm_pred_ssp585 <- predict(predictors_ssp585, gbm_model, n.trees = best_trees, type = "response",na.rm=TRUE)
+# 
+# # MaxEnt prediction
+# maxent_pred_ssp585 <- predict(predictors_ssp585, maxent_model,na.rm=TRUE)
+# 
+# # Random Forest prediction
+# rf_pred_ssp585 <- predict(predictors_ssp585, rf_model, type = "prob", index = 2, na.rm=TRUE)
 
 # # 8. Plot predictions ----------------------------------------------------
 # jpeg(paste0(output_specie, tag_spe, "_SDM_prediction_ssp585_Map.jpg"),
@@ -75,4 +75,51 @@ rf_pred_ssp585 <- predict(predictors_ssp585, rf_model, type = "prob", index = 2,
 # writeRaster(rf_pred_ssp585,paste0(output_specie, tag_spe, "_", "RandomForest_ssp585.tif"), overwrite=TRUE)
 # writeRaster(ensemble_ssp585_scaled,paste0(output_specie, tag_spe, "_", "ensemble_ssp585_scaled.tif"), overwrite=TRUE)
 # 
+
+
+tasks <- list(
+  list(model = "GAM",    output = paste0(output_specie, tag_spe, "_", "SSP585_GAM.tif")),
+  list(model = "BRT",    output = paste0(output_specie, tag_spe, "_", "SSP585_BRT.tif")),
+  list(model = "MaxEnt", output = paste0(output_specie, tag_spe, "_", "SSP585_MaxEnt.tif")),
+  list(model = "RF",     output = paste0(output_specie, tag_spe, "_", "SSP585_RF.tif"))
+)
+
+# Función que, según la tarea, realiza la predicción y guarda el raster
+predict_and_write <- function(task) {
+  predictors <- c(rast(paste0(predictors_path, "bioclim_ensemble_raster_ssp585_2040_2060.tif")),
+                  rast(paste0(predictors_path, "soil_predictors.tiff")),
+                  rast(paste0(predictors_path, "terrain_predictors.tiff")))
+  
+  if (task$model == "GAM") {
+    pred <- predict(predictors, gam_model, type = "response")
+  } else if (task$model == "BRT") {
+    pred <- predict(predictors, gbm_model, n.trees = best_trees, type = "response", na.rm = TRUE)
+  } else if (task$model == "MaxEnt") {
+    pred <- predict(predictors, maxent_model, na.rm = TRUE)
+  } else if (task$model == "RF") {
+    pred <- predict(predictors, rf_model, type = "prob", index = 2, na.rm = TRUE)
+  }
+  
+  writeRaster(pred, task$output, overwrite = TRUE)
+  return(task$model)
+}
+
+# Ejecutar las tareas en paralelo
+results_ssp585 <- parLapply(cl, tasks, predict_and_write)
+
+# Detener el cluster
+stopCluster(cl)
+
+# 7. Create predictions ---------------------------------------------------
+# GAM prediction
+gam_pred_ssp585 <- rast(tasks[[1]]$output)
+
+# BRT prediction
+gbm_pred_ssp585 <- rast(tasks[[2]]$output)
+
+# MaxEnt prediction
+maxent_pred_ssp585 <- rast(tasks[[3]]$output)
+
+# Random Forest prediction
+rf_pred_ssp585 <- rast(tasks[[4]]$output)
 
