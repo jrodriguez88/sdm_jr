@@ -5,27 +5,27 @@
 
 # library(tidymodels)
 # library(car)
-library(usdm)
-
-## Prepare data
-predictors <- raster::stack(all_predictors)
-species_dta <- data_cleaned
-species_dta <- species_dta %>% 
-  terra::as.data.frame() %>% 
-  dplyr::select(lon, lat) 
-
-## Valores de presencia
-presvals <- extract(predictors, species_dta)
-#presvals <- presvals[,-1] 
 
 
-
-n_points <- nrow(data_cleaned)
-set.seed(2024)
-backgr <- randomPoints(predictors, n_points)
-absvals <- extract(predictors, backgr)
-pb <- c(rep(1, nrow(presvals)), rep(0, nrow(absvals)))
-sdm_data <- data.frame(cbind(pb, rbind(presvals, absvals)))
+# ## Prepare data
+# predictors <- raster::stack(all_predictors)
+# species_dta <- data_cleaned
+# species_dta <- species_dta %>% 
+#   terra::as.data.frame() %>% 
+#   dplyr::select(lon, lat) 
+# 
+# ## Valores de presencia
+# presvals <- extract(predictors, species_dta)
+# #presvals <- presvals[,-1] 
+# 
+# 
+# 
+# n_points <- nrow(data_cleaned)
+# set.seed(2024)
+# backgr <- randomPoints(predictors, n_points)
+# absvals <- extract(predictors, backgr)
+# pb <- c(rep(1, nrow(presvals)), rep(0, nrow(absvals)))
+# sdm_data <- data.frame(cbind(pb, rbind(presvals, absvals)))
 
 
 # # Tidymodels preprare recipe
@@ -85,19 +85,9 @@ sdm_data <- data.frame(cbind(pb, rbind(presvals, absvals)))
 # 
 # v1
 
-vif_sdm <- vifstep(sdm_data, th=vif_threshold) # identify collinear variables that should be excluded
 
 
 
-pred_select <- names(exclude(sdm_data, vif_sdm))[-1]
-
-#cor_matrix <- cor(sdmdata, use = "complete.obs", method = "spearman")
-cor_matrix <- cor(exclude(sdm_data, vif_sdm), use = "complete.obs", method = "pearson")
-png(paste0(output_specie, tag_spe, "_Pearson_correlacion_predictores.png"),
-     width = 11.7, height = 8.3, units="in", res=300)
-par(mfrow = c(1,1))
-corrplot::corrplot.mixed(cor_matrix, main = "\nPearson Correlation")
-dev.off()
 ##### background
 
 # Set seed for reproducibility
@@ -105,15 +95,15 @@ set.seed(123)
 
 # 1. Load data ------------------------------------------------------------
 species_points <- points_cleaned
-predictors <- all_predictors[[pred_select]]
-# predictors <- rast("F:/trabajos/paper_avocado_2025/sdm_jr-master/data/predictors/11_predictors.tif")
-# names(predictors)<-c("bio_14","bio_18","bio_19","Aluminium","Ph","Slope","Total_carbon","Clay","Silt","Bedrock","Total_Nitrogen")
+predictors <- all_predictors#[[pred_select]]
+#writeRaster(predictors, filename = paste0(output_specie, tag_spe, "_model_predictors_base.tif"))
+
 
 # 2. Prepare data ---------------------------------------------------------
 # 2. Prepare data ---------------------------------------------------------
 # Extraer valores para puntos de presencia
 
-threshold_distance <- 20000  # 20 km
+threshold_distance <- buffer_presence  # 20 km
 
 # Buffer the presence points to exclude nearby areas
 presence_buffer <- terra::buffer(species_points, width = threshold_distance)
@@ -126,7 +116,7 @@ background_area <- terra::erase(study_area, presence_buffer)
 # We want to generate pseudo-absence points using the "2°far" method.
 # The recommendation here is to use a number equal to the number of presences (i.e. 49).
 # To ensure we get enough non-NA points, we first sample more candidates and then randomly select.
-num_PA <- nrow(terra::extract(predictors, species_points, ID = FALSE))  # should be 49
+num_PA <- nrow(terra::extract(predictors, species_points, ID = FALSE))  
 
 # Sample candidate points from the background area
 # Here we sample 5 times as many candidate points as needed.
@@ -183,6 +173,24 @@ ggsave(filename = paste0(output_specie, tag_spe, "_Background_plot.jpg"),
 
 
   
+to_cor_step <- dplyr::select(full_data, -c(presence, x, y)) %>% scale()
+
+#cor_sdm <- vifcor(to_cor_step, th = corr_threshold)
+vif_sdm <- vifstep(to_cor_step, th=vif_threshold) # identify collinear variables that should be excluded
+
+#pred_select <- names(exclude(full_data, cor_sdm))[-1]
+
+pred_select <- names(exclude(dplyr::select(full_data, -c(presence, x, y)), vif_sdm))
+
+#cor_matrix <- cor(sdmdata, use = "complete.obs", method = "spearman")
+cor_matrix <- cor(dplyr::select(full_data, all_of(pred_select)), use = "complete.obs", method = "pearson")
+png(paste0(output_specie, tag_spe, "_Pearson_correlacion_predictores.png"),
+    width = 12, height = 12, units="in", res=300)
+par(mfrow = c(1,1))
+corrplot::corrplot.mixed(cor_matrix, main = "\nPearson Correlation")
+dev.off()
 
 
+predictors <- all_predictors[[pred_select]]
+# writeRaster(predictors, filename = paste0(output_specie, tag_spe, "_model_predictors_base.tif"), overwrite = T)
 

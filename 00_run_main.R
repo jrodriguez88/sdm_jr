@@ -6,10 +6,13 @@
 # Load dependencies
 
 #install.packages(c('tidyverse', 'terra', 'dismo', 'rJava', 'geodata', "tidymodels", "car", "naniar","randomForest", "corrplot"))
+options(java.parameters = "-Xmx16g")
+
 library(tidyverse)
 library(terra)
 library(raster)
 library(dismo)
+library(usdm)
 library(rJava)
 library(geodata)
 # library(tidymodels)
@@ -27,6 +30,9 @@ library(CoordinateCleaner)
 library(viridis)
 #library(biooracler)
 # library(exactextractr)
+
+library(gridBase)
+library(grid)
 
 
 ## Limites Territoriales----
@@ -66,11 +72,12 @@ vainilla <- c("vanilla", "") #"planifolia")
 set.seed(2024)
 
 especies_list <- list(cacao, canangucha, copoazu, coco, vainilla)
-
+#especies_list <- list(vainilla)
 
 # Global args
+corr_threshold = 0.9
 vif_threshold = 15
-threshold_distance <- 20000
+buffer_presence <- 20000
 pseudo_ausencia_mult <- 3
 path <- getwd()
 
@@ -85,9 +92,15 @@ for (especie in seq_along(especies_list)){
   
   source("02_Ocurrence_data.R") # Descarga y limpieza
   source("03_VIF_and_background.R")  # VF and Background
-  source("04_Modeling_SDM.R") # SDM models an evals
+  source("04_SDM_training_eval.R")
+  source("05_SDM_predict_baseline.R")
+  source("05_SDM_predict_ssp245.R")
+  source("05_SDM_predict_ssp585.R")
+  source("06_Delta_maps.R")
+  # source("04_Modeling_SDM.R") # SDM models an evals
   
 }
+
 
   
 
